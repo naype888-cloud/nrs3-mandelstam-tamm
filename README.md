@@ -3,6 +3,8 @@
 **No quantum state becomes orthogonal to itself before `πħ / (2ΔE)`** — Mandelstam and Tamm's
 speed limit with its sharp constant, proved in Lean 4.
 
+**[▶ Try it: move the time and watch the phasors](https://naype888-cloud.github.io/nrs3-mandelstam-tamm/)**
+
 ![NRS³ · Mandelstam–Tamm](docs/figures/mandelstam_tamm_sharp.png)
 
 ## Results
@@ -11,11 +13,14 @@ speed limit with its sharp constant, proved in Lean 4.
 |---|---|
 | `‖A(t)‖ ≥ cos(ΔE t)` while `ΔE t ≤ π/2`, for every finite spectrum | `cos_le_norm_amplitude` |
 | orthogonality forces `ΔE t ≥ π/2` | `orthogonality_time` |
+| two equal branches meet it with equality: `π/2` is sharp | `norm_amplitude_half_eq_cos` |
 | on `H_d = ℂ^d`: the Schrödinger evolution of a self-adjoint `H` has exactly this amplitude | `hasDerivAt_evolve`, `inner_evolve` |
 | the bound on `ℂ^d` | `cos_le_norm_inner_evolve` |
 
-`A(t) = ⟨ψ, e^{−iHt/ħ}ψ⟩` is the survival amplitude and `ΔE` the energy spread. Two equal branches
-reach orthogonality exactly at `π/2`, so the constant cannot be improved (`nrs3-penrose`).
+`A(t) = ⟨ψ, e^{−iHt/ħ}ψ⟩` is the survival amplitude and `ΔE` the energy spread. It is the sum of
+the arrows `p_k e^{−iE_k t}`; its tip never enters the disc of radius `cos(ΔE t)`:
+
+![Phasors](docs/figures/mandelstam_tamm_phasors.png)
 
 ## In NRS³
 
