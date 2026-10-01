@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandelstam–Tamm, interactive</title>
+<meta name="description" content="No quantum state becomes orthogonal to itself before πħ/(2ΔE). Move the time, watch the phasors.">
+<style>
+  :root {
+    --bg: #fcfcfb; --panel: #ffffff; --ink: #0b0b0b; --ink2: #52514e; --muted: #8a8985;
+    --grid: #e4e3df; --blue: #2a78d6; --orange: #eb6834; --disc: rgba(235, 104, 52, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111110; --panel: #191918; --ink: #f2f1ee; --ink2: #c4c3bf; --muted: #8a8985;
+      --grid: #2c2b29; --blue: #5b9be6; --orange: #f08a5d; --disc: rgba(240, 138, 93, 0.16);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111110; --panel: #191918; --ink: #f2f1ee; --ink2: #c4c3bf; --muted: #8a8985;
+    --grid: #2c2b29; --blue: #5b9be6; --orange: #f08a5d; --disc: rgba(240, 138, 93, 0.16);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 1.45rem; margin: 0 0 4px; font-weight: 650; }
+  .lead { color: var(--ink2); margin: 0 0 18px; max-width: 760px; }
+  .grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--grid); border-radius: 10px; padding: 12px;
+  }
+  .card h2 { font-size: 0.95rem; margin: 0 0 6px; font-weight: 600; color: var(--ink2); }
+  canvas { width: 100%; display: block; }
+  #plot { aspect-ratio: 16 / 10; }
+  #phasor { aspect-ratio: 1 / 1; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 16px 0 8px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  button {
+    font: inherit; font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--panel); color: var(--ink);
+  }
+  button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .slider { display: flex; align-items: center; gap: 10px; flex: 1 1 320px; }
+  input[type="range"] { flex: 1; accent-color: var(--blue); }
+  .readout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  @media (max-width: 520px) { .readout { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--panel); border: 1px solid var(--grid); border-radius: 8px; padding: 8px 10px; }
+  .stat .k { font-size: 0.78rem; color: var(--muted); }
+  .stat .v { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .ok { color: var(--blue); } .edge { color: var(--orange); }
+  .note { color: var(--ink2); font-size: 0.9rem; margin-top: 14px; max-width: 820px; }
+  code { font-size: 0.88em; }
+  a { color: var(--blue); }
+  .legend { font-size: 0.8rem; color: var(--ink2); margin: 0 0 6px; display: flex;
+    flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .sw { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid; margin-left: 6px; }
+  .sw.blue { border-color: var(--blue); } .sw.orange { border-color: var(--orange); }
+  .sw.dash { border-top-style: dashed; }
+  .sw.disc { height: 10px; border: 0; background: var(--disc); }
+  .theme { float: right; font-size: 0.8rem; padding: 4px 10px; }
+</style>
+</head>
+<body>
+<main>
+  <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Theme</button>
+  <h1>No state turns orthogonal before πħ / (2ΔE)</h1>
+  <p class="lead">The survival amplitude <code>A(t) = ∑ p<sub>k</sub> e<sup>−iE<sub>k</sub>t</sup></code>
+    is the sum of the arrows on the right. Mandelstam–Tamm, proved in Lean:
+    <code>‖A(t)‖ ≥ cos(ΔE·t)</code> until <code>ΔE·t = π/2</code>. The arrow tip can never enter the
+    orange disc; the disc shrinks to nothing exactly at π/2.</p>
+
+  <div class="controls">
+    <div class="presets" role="group" aria-label="Spectrum">
+      <button type="button" data-preset="two" aria-pressed="true">Two branches</button>
+      <button type="button" data-preset="three" aria-pressed="false">Three levels</button>
+      <button type="button" data-preset="random" aria-pressed="false">Random</button>
+      <button type="button" data-preset="many" aria-pressed="false">Many levels</button>
+      <button type="button" id="reroll" title="Draw another random spectrum">↻ new</button>
+    </div>
+    <div class="slider">
+      <button type="button" id="play" aria-label="Play">▶</button>
+      <label for="time">ΔE·t</label>
+      <input id="time" type="range" min="0" max="3.2" step="0.005" value="0.8">
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>‖A(t)‖ against ΔE·t / ħ</h2>
+      <div class="legend"><span class="sw blue"></span>‖A(t)‖
+        <span class="sw orange dash"></span>floor cos(ΔE·t), Lean
+        <span class="sw disc"></span>forbidden</div>
+      <canvas id="plot"></canvas></div>
+    <div class="card"><h2>Phasors p<sub>k</sub> e<sup>−iE<sub>k</sub>t</sup>, tip to tail</h2>
+      <canvas id="phasor"></canvas></div>
+  </div>
+
+  <div class="readout" aria-live="polite">
+    <div class="stat"><div class="k">ΔE·t / ħ</div><div class="v" id="r-t">–</div></div>
+    <div class="stat"><div class="k">‖A(t)‖</div><div class="v" id="r-a">–</div></div>
+    <div class="stat"><div class="k">floor cos(ΔE·t)</div><div class="v" id="r-c">–</div></div>
+    <div class="stat"><div class="k">margin</div><div class="v" id="r-m">–</div></div>
+  </div>
+
+  <p class="note">Two equal branches touch the floor at every time and reach zero exactly at π/2:
+    the constant cannot be improved. Every other spectrum stays strictly above. Energies are
+    rescaled so that ΔE = 1 and centred so that ⟨E⟩ = 0 (a global phase). Lean:
+    <code>MandelstamTamm1945.cos_le_norm_amplitude</code>, <code>orthogonality_time</code>,
+    and on <code>ℂ^d</code>, <code>cos_le_norm_inner_evolve</code> —
+    <a href="https://github.com/naype888-cloud/nrs3-mandelstam-tamm">source</a>.</p>
+</main>
+<script>
+(() => {
+  const HALF_PI = Math.PI / 2, TMAX = 3.2;
+  const $ = (id) => document.getElementById(id);
+  const plot = $("plot"), phasor = $("phasor"), slider = $("time"), playBtn = $("play");
+  let spec = null, preset = "two", playing = false, last = 0;
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  // weights p, energies E; normalise to mean 0 and spread 1
+  function normalise(p, e) {
+    const s = p.reduce((a, b) => a + b, 0); p = p.map((x) => x / s);
+    const m = p.reduce((a, x, i) => a + x * e[i], 0);
+    const sd = Math.sqrt(p.reduce((a, x, i) => a + x * (e[i] - m) ** 2, 0));
+    return { p, e: e.map((x) => (x - m) / sd) };
+  }
+  function randn() { return Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random()); }
+  function make(kind) {
+    if (kind === "two") return normalise([1, 1], [-1, 1]);
+    if (kind === "three") return normalise([1, 1, 1], [-1, 0, 1]);
+    const n = kind === "many" ? 40 : 3 + Math.floor(Math.random() * 6);
+    const p = Array.from({ length: n }, () => -Math.log(1 - Math.random()));
+    const e = Array.from({ length: n }, () => randn());
+    return normalise(p, e);
+  }
+  function amp(t) {
+    let re = 0, im = 0;
+    for (let k = 0; k < spec.p.length; k++) {
+      re += spec.p[k] * Math.cos(spec.e[k] * t); im -= spec.p[k] * Math.sin(spec.e[k] * t);
+    }
+    return [re, im];
+  }
+
+  function setup(c) {
+    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return [g, r.width, r.height];
+  }
+
+  function drawPlot(t) {
+    const [g, w, h] = setup(plot);
+    const L = 40, R = 12, T = 12, B = 30, W = w - L - R, Hh = h - T - B;
+    const X = (x) => L + (x / TMAX) * W, Y = (y) => T + (1 - y / 1.05) * Hh;
+    g.font = "12px system-ui, sans-serif"; g.lineWidth = 1;
+    // grid
+    g.strokeStyle = css("--grid"); g.fillStyle = css("--muted");
+    for (let y = 0; y <= 1.0001; y += 0.25) {
+      g.beginPath(); g.moveTo(L, Y(y)); g.lineTo(L + W, Y(y)); g.stroke();
+      g.fillText(y.toFixed(2), 4, Y(y) + 4);
+    }
+    for (let x = 0; x <= 3; x += 0.5) {
+      g.beginPath(); g.moveTo(X(x), T); g.lineTo(X(x), T + Hh); g.stroke();
+      g.fillText(x.toFixed(1), X(x) - 9, T + Hh + 18);
+    }
+    // forbidden region below the floor (up to π/2)
+    g.beginPath(); g.moveTo(X(0), Y(0));
+    for (let x = 0; x <= HALF_PI; x += 0.01) g.lineTo(X(x), Y(Math.cos(x)));
+    g.lineTo(X(HALF_PI), Y(0)); g.closePath(); g.fillStyle = css("--disc"); g.fill();
+    // π/2 line
+    g.strokeStyle = css("--orange"); g.setLineDash([3, 4]);
+    g.beginPath(); g.moveTo(X(HALF_PI), T); g.lineTo(X(HALF_PI), T + Hh); g.stroke();
+    g.setLineDash([]); g.fillStyle = css("--orange"); g.fillText("π/2", X(HALF_PI) + 4, T + 12);
+    // floor cos
+    g.strokeStyle = css("--orange"); g.lineWidth = 2; g.setLineDash([7, 5]); g.beginPath();
+    for (let x = 0; x <= HALF_PI; x += 0.01) (x ? g.lineTo : g.moveTo).call(g, X(x), Y(Math.cos(x)));
+    g.stroke(); g.setLineDash([]);
+    // |A|
+    g.strokeStyle = css("--blue"); g.lineWidth = 2.4; g.beginPath();
+    for (let i = 0; i <= 640; i++) {
+      const x = (i / 640) * TMAX, [a, b] = amp(x), y = Math.hypot(a, b);
+      (i ? g.lineTo : g.moveTo).call(g, X(x), Y(y));
+    }
+    g.stroke();
+    // cursor
+    const [a, b] = amp(t), y = Math.hypot(a, b);
+    g.strokeStyle = css("--ink2"); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(X(t), T); g.lineTo(X(t), T + Hh); g.stroke();
+    g.fillStyle = css("--blue"); g.beginPath(); g.arc(X(t), Y(y), 5, 0, 2 * Math.PI); g.fill();
+  }
+
+  function arrow(g, x0, y0, x1, y1, color, width) {
+    g.strokeStyle = color; g.fillStyle = color; g.lineWidth = width;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    const a = Math.atan2(y1 - y0, x1 - x0), s = 4 + width * 1.5;
+    if (Math.hypot(x1 - x0, y1 - y0) < s) return;
+    g.beginPath(); g.moveTo(x1, y1);
+    g.lineTo(x1 - s * Math.cos(a - 0.4), y1 - s * Math.sin(a - 0.4));
+    g.lineTo(x1 - s * Math.cos(a + 0.4), y1 - s * Math.sin(a + 0.4)); g.closePath(); g.fill();
+  }
+
+  function drawPhasor(t) {
+    const [g, w, h] = setup(phasor);
+    const cx = w / 2, cy = h / 2, S = Math.min(w, h) * 0.44;
+    const P = (re, im) => [cx + re * S, cy - im * S];
+    g.strokeStyle = css("--grid"); g.lineWidth = 1;
+    g.beginPath(); g.arc(cx, cy, S, 0, 2 * Math.PI); g.stroke();
+    g.beginPath(); g.moveTo(cx - S, cy); g.lineTo(cx + S, cy); g.moveTo(cx, cy - S); g.lineTo(cx, cy + S); g.stroke();
+    // forbidden disc of radius cos t
+    if (t < HALF_PI) {
+      g.fillStyle = css("--disc"); g.strokeStyle = css("--orange"); g.setLineDash([6, 4]);
+      g.beginPath(); g.arc(cx, cy, Math.cos(t) * S, 0, 2 * Math.PI); g.fill(); g.stroke();
+      g.setLineDash([]);
+    }
+    // chain of phasors
+    let re = 0, im = 0;
+    const n = spec.p.length, thin = n > 12 ? 1 : 1.6;
+    for (let k = 0; k < n; k++) {
+      const dr = spec.p[k] * Math.cos(spec.e[k] * t), di = -spec.p[k] * Math.sin(spec.e[k] * t);
+      const [x0, y0] = P(re, im), [x1, y1] = P(re + dr, im + di);
+      arrow(g, x0, y0, x1, y1, css("--muted"), thin);
+      re += dr; im += di;
+    }
+    const [x1, y1] = P(re, im);
+    arrow(g, cx, cy, x1, y1, css("--blue"), 2.6);
+    g.font = "12px system-ui, sans-serif"; g.fillStyle = css("--muted");
+    g.fillText("unit circle", cx + S * 0.72, cy - S * 0.72);
+    if (t < HALF_PI) { g.fillStyle = css("--orange"); g.fillText("radius cos(ΔE·t)", cx + 6, cy + Math.cos(t) * S - 6); }
+  }
+
+  function update() {
+    const t = parseFloat(slider.value), [a, b] = amp(t), A = Math.hypot(a, b);
+    drawPlot(t); drawPhasor(t);
+    const floor = t <= HALF_PI ? Math.cos(t) : 0;
+    $("r-t").textContent = t.toFixed(3);
+    $("r-a").textContent = A.toFixed(4);
+    $("r-c").textContent = t <= HALF_PI ? floor.toFixed(4) : "0 (past π/2)";
+    const m = A - floor, r = $("r-m");
+    r.textContent = (m >= 0 ? "+" : "") + m.toFixed(4);
+    r.className = "v " + (m < 5e-4 ? "edge" : "ok");
+    slider.setAttribute("aria-valuetext", `ΔE·t ${t.toFixed(2)}, amplitude ${A.toFixed(3)}`);
+  }
+
+  function choose(kind) {
+    preset = kind; spec = make(kind);
+    document.querySelectorAll("[data-preset]").forEach((b) =>
+      b.setAttribute("aria-pressed", String(b.dataset.preset === kind)));
+    update();
+  }
+  document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => choose(b.dataset.preset)));
+  $("reroll").addEventListener("click", () => choose(preset === "two" || preset === "three" ? "random" : preset));
+  slider.addEventListener("input", update);
+  function tick(ts) {
+    if (!playing) return;
+    const dt = last ? (ts - last) / 1000 : 0; last = ts;
+    let t = parseFloat(slider.value) + dt * 0.45;
+    if (t > TMAX) t = 0;
+    slider.value = t; update(); requestAnimationFrame(tick);
+  }
+  playBtn.addEventListener("click", () => {
+    playing = !playing; playBtn.textContent = playing ? "❚❚" : "▶";
+    playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
+    if (playing) { last = 0; requestAnimationFrame(tick); }
+  });
+  $("theme").addEventListener("click", () => {
+    const root = document.documentElement, dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const cur = root.dataset.theme || (dark ? "dark" : "light");
+    root.dataset.theme = cur === "dark" ? "light" : "dark"; update();
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
+  window.addEventListener("resize", update);
+  choose("two");
+})();
+</script>
+</body>
+</html>
