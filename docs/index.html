@@ -63,11 +63,13 @@
   .sw.dash { border-top-style: dashed; }
   .sw.disc { height: 10px; border: 0; background: var(--disc); }
   .theme { float: right; font-size: 0.8rem; padding: 4px 10px; }
+  .tabs { display: flex; gap: 6px; margin: 0 0 10px; font-size: .85rem; } .tabs a { padding: 3px 12px; border-radius: 999px; border: 1px solid var(--grid); color: var(--ink2); text-decoration: none; } .tabs a[aria-current] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 </style>
 </head>
 <body>
 <main>
   <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Theme</button>
+  <nav class="tabs" aria-label="Pages"><a href="./" aria-current="page">Mandelstam–Tamm</a><a href="cramer-rao.html">Cramér–Rao</a></nav>
   <h1>No state turns orthogonal before πħ / (2ΔE)</h1>
   <p class="lead">The survival amplitude <code>A(t) = ∑ p<sub>k</sub> e<sup>−iE<sub>k</sub>t</sup></code>
     is the sum of the arrows on the right. Mandelstam–Tamm, proved in Lean:
@@ -111,7 +113,7 @@
     rescaled so that ΔE = 1 and centred so that ⟨E⟩ = 0 (a global phase). Lean:
     <code>MandelstamTamm1945.cos_le_norm_amplitude</code>, <code>orthogonality_time</code>,
     and on <code>ℂ^d</code>, <code>cos_le_norm_inner_evolve</code> —
-    <a href="https://github.com/naype888-cloud/nrs3-mandelstam-tamm">source</a>.</p>
+    <a href="https://github.com/naype888-cloud/nrs3-mandelstam-tamm-cramer-rao">source</a>.</p>
 </main>
 <script>
 (() => {

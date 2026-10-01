@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cramér–Rao on NRS³</title>
+<meta name="description" content="How much of the quantum Fisher information 4 Var T can position P read? Turn the phase of the state and watch the fluctuation vectors.">
+<style>
+  :root { --bg: #fcfcfb; --panel: #fff; --ink: #0b0b0b; --ink2: #52514e; --muted: #8a8985;
+    --grid: #e4e3df; --blue: #2a78d6; --orange: #eb6834; --green: #2f8f5b; --soft: rgba(42,120,214,.10); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #111110; --panel: #191918; --ink: #f2f1ee; --ink2: #c4c3bf; --grid: #2c2b29;
+    --blue: #5b9be6; --orange: #f08a5d; --green: #4fb37d; --soft: rgba(91,155,230,.14); } }
+  :root[data-theme="dark"] { --bg: #111110; --panel: #191918; --ink: #f2f1ee; --ink2: #c4c3bf;
+    --grid: #2c2b29; --blue: #5b9be6; --orange: #f08a5d; --green: #4fb37d; --soft: rgba(91,155,230,.14); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 1.45rem; margin: 0 0 4px; font-weight: 650; }
+  .lead { color: var(--ink2); margin: 0 0 16px; max-width: 780px; }
+  .theme { float: right; font: inherit; font-size: .8rem; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--grid); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px 18px; align-items: center; margin-bottom: 12px; }
+  @media (max-width: 700px) { .controls { grid-template-columns: 1fr; } }
+  .sl { display: flex; gap: 10px; align-items: center; font-variant-numeric: tabular-nums; }
+  .sl input { flex: 1; min-width: 0; accent-color: var(--blue); }
+  .sl b { min-width: 3.4em; text-align: right; }
+  button { font: inherit; font-size: .9rem; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--panel); color: var(--ink); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--grid); border-radius: 10px; padding: 12px; }
+  .card h2 { font-size: .95rem; margin: 0 0 6px; font-weight: 600; color: var(--ink2); }
+  canvas { width: 100%; display: block; }
+  #vec { aspect-ratio: 1 / 1; } #plot { aspect-ratio: 5 / 4; }
+  .readout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  @media (max-width: 560px) { .readout { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--panel); border: 1px solid var(--grid); border-radius: 8px; padding: 8px 10px; }
+  .stat .k { font-size: .78rem; color: var(--muted); } .stat .v { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .bar { height: 12px; border-radius: 6px; background: var(--soft); margin-top: 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--blue); width: 0; }
+  .note { color: var(--ink2); font-size: .9rem; margin-top: 14px; max-width: 840px; }
+  code { font-size: .88em; } a { color: var(--blue); }
+  .tabs { display: flex; gap: 6px; margin: 0 0 10px; font-size: .85rem; } .tabs a { padding: 3px 12px; border-radius: 999px; border: 1px solid var(--grid); color: var(--ink2); text-decoration: none; } .tabs a[aria-current] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Theme</button>
+  <nav class="tabs" aria-label="Pages"><a href="./">Mandelstam–Tamm</a><a href="cramer-rao.html" aria-current="page">Cramér–Rao</a></nav>
+  <h1>How much of F<sub>Q</sub> can position read?</h1>
+  <p class="lead">A phase θ is written by transport, <code>e<sup>−iθT</sup></code>, and read with position
+    <code>P</code>. The quantum Fisher information is <code>F<sub>Q</sub> = 4 Var T</code>; reading with
+    <code>P</code> gives <code>F<sub>P</sub> = |⟨[T, P]⟩|² / Var P</code>. Lean: <code>F<sub>P</sub> ≤ F<sub>Q</sub></code>,
+    always. Turn the phase of the state and watch the two fluctuation vectors open and close.</p>
+
+  <div class="controls">
+    <label class="sl">sites d<input id="d" type="range" min="2" max="30" value="4"><b id="vd">4</b></label>
+    <label class="sl">phase step φ<input id="phi" type="range" min="0" max="3.1416" step="0.005" value="1.5708"><b id="vphi">π/2</b></label>
+    <div><button type="button" id="star">ψ* (φ = π/2)</button> <button type="button" id="rand">↻ random state</button></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>δT and δP in the plane they span</h2><canvas id="vec" aria-label="Fluctuation vectors"></canvas></div>
+    <div class="card"><h2>F<sub>P</sub> against F<sub>Q</sub>: every state stays under the line</h2><canvas id="plot" aria-label="Fisher information scatter"></canvas></div>
+  </div>
+
+  <div class="readout" aria-live="polite">
+    <div class="stat"><div class="k">F<sub>Q</sub> = 4 Var T</div><div class="v" id="rq">–</div></div>
+    <div class="stat"><div class="k">F<sub>P</sub></div><div class="v" id="rp">–</div></div>
+    <div class="stat"><div class="k">efficiency F<sub>P</sub>/F<sub>Q</sub></div><div class="v" id="re">–</div><div class="bar"><div id="bar"></div></div></div>
+    <div class="stat"><div class="k">angle between δT and δP</div><div class="v" id="ra">–</div></div>
+  </div>
+
+  <p class="note">The state is <code>ψ<sub>j</sub> ∝ sin((j+1)π/(d+1)) e<sup>−ijφ</sup></code>; at φ = π/2 it is the
+    maximal-tension state ψ* of NRS, where the efficiency is exactly <code>1/C<sub>Nava</sub>(d)² = cos² θ<sub>NRS</sub>(d)</code>:
+    1 at d = 2, 3 and strictly below from d = 4 on (D41 in
+    <a href="https://github.com/naype888-cloud/nava-robertson-schrodinger">nava-robertson-schrodinger</a>).
+    The bound itself is <code>CramerRao.fisher_le_qfi</code>, from Robertson (<code>CramerRao.robertson</code>) —
+    <a href="https://github.com/naype888-cloud/nrs3-mandelstam-tamm-cramer-rao">source</a>. Grey dots: random states of the same d.</p>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let d = 4, phi = Math.PI / 2, state = null, cloud = [];
+
+  function ops(d) {
+    const rho = 2 * Math.cos(Math.PI / (d + 1));
+    return { rho, p: Array.from({ length: d }, (_, j) => (2 * (j + 1) - (d + 1)) / (d - 1)) };
+  }
+  // fluctuation vectors and Fisher informations of a complex state (re, im)
+  function analyse(re, im) {
+    const n = re.length, { rho, p } = ops(n);
+    let nn = 0; for (let j = 0; j < n; j++) nn += re[j] ** 2 + im[j] ** 2;
+    const s = Math.sqrt(nn); re = re.map((x) => x / s); im = im.map((x) => x / s);
+    const Tr = re.map((_, j) => ((j ? re[j - 1] : 0) + (j < n - 1 ? re[j + 1] : 0)) / rho);
+    const Ti = im.map((_, j) => ((j ? im[j - 1] : 0) + (j < n - 1 ? im[j + 1] : 0)) / rho);
+    let mT = 0, mP = 0;
+    for (let j = 0; j < n; j++) { mT += re[j] * Tr[j] + im[j] * Ti[j]; mP += p[j] * (re[j] ** 2 + im[j] ** 2); }
+    let vT = 0, vP = 0, ir = 0, ii = 0;
+    for (let j = 0; j < n; j++) {
+      const xr = Tr[j] - mT * re[j], xi = Ti[j] - mT * im[j], yr = (p[j] - mP) * re[j], yi = (p[j] - mP) * im[j];
+      vT += xr * xr + xi * xi; vP += yr * yr + yi * yi; ir += xr * yr + xi * yi; ii += xr * yi - xi * yr;
+    }
+    const FQ = 4 * vT, FP = vP > 1e-14 ? 4 * ii * ii / vP : 0;
+    const cosang = Math.min(1, Math.hypot(ir, ii) / Math.sqrt(vT * vP || 1));
+    return { FQ, FP, sT: Math.sqrt(vT), sP: Math.sqrt(vP), ir, ii, ang: Math.acos(cosang) };
+  }
+  function phased(d, phi) {
+    const re = [], im = [];
+    for (let j = 0; j < d; j++) { const a = Math.sin((j + 1) * Math.PI / (d + 1)); re.push(a * Math.cos(j * phi)); im.push(-a * Math.sin(j * phi)); }
+    return [re, im];
+  }
+  function randn() { return Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random()); }
+  function randomState(d) { return [Array.from({ length: d }, randn), Array.from({ length: d }, randn)]; }
+  function makeCloud() { cloud = Array.from({ length: 900 }, () => analyse(...randomState(d))); }
+
+  function setup(c) {
+    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, r.width, r.height];
+  }
+  function arrow(g, x0, y0, x1, y1, col, w, dash) {
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.setLineDash(dash || []);
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.setLineDash([]);
+    const a = Math.atan2(y1 - y0, x1 - x0), s = 9;
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - s * Math.cos(a - .38), y1 - s * Math.sin(a - .38));
+    g.lineTo(x1 - s * Math.cos(a + .38), y1 - s * Math.sin(a + .38)); g.closePath(); g.fill();
+  }
+  function drawVec(st) {
+    const [g, w, h] = setup($("vec")), cx = w * 0.14, cy = h * 0.64, S = Math.min(w, h) * 0.95 / Math.max(st.sT, st.sP, 0.3) * 0.62;
+    // δT along the x axis, δP at the angle between them
+    const T = [st.sT * S, 0], P = [st.sP * S * Math.cos(st.ang), st.sP * S * Math.sin(st.ang)];
+    g.fillStyle = css("--soft");
+    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, 46, -st.ang, 0); g.closePath(); g.fill();
+    // projection of δP on δT: the part that carries no information
+    g.strokeStyle = css("--muted"); g.setLineDash([4, 4]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(cx + P[0], cy - P[1]); g.lineTo(cx + P[0], cy); g.stroke(); g.setLineDash([]);
+    arrow(g, cx, cy, cx + T[0], cy, css("--blue"), 3);
+    arrow(g, cx, cy, cx + P[0], cy - P[1], css("--orange"), 3);
+    g.font = "13px system-ui, sans-serif";
+    g.fillStyle = css("--blue"); g.fillText(`δT  (σT = ${st.sT.toFixed(3)})`, cx + T[0] - 110, cy + 22);
+    g.fillStyle = css("--orange"); g.fillText(`δP  (σP = ${st.sP.toFixed(3)})`, cx + P[0] + 8, cy - P[1] - 6);
+    g.fillStyle = css("--ink2"); g.fillText(`${(st.ang * 180 / Math.PI).toFixed(2)}°`, cx + 52, cy - 10);
+    g.fillStyle = css("--muted"); g.font = "12px system-ui, sans-serif";
+    g.fillText("efficiency = (Im⟨δT, δP⟩)² / (σT σP)² ≤ cos²(angle) ≤ 1", 10, h - 10);
+  }
+  function drawPlot(st) {
+    const [g, w, h] = setup($("plot")), L = 46, R = 12, T = 12, B = 34, W = w - L - R, H = h - T - B;
+    const mx = Math.max(...cloud.map((c) => c.FQ), st.FQ) * 1.08;
+    const X = (x) => L + x / mx * W, Y = (y) => T + (1 - y / mx) * H;
+    g.strokeStyle = css("--grid"); g.fillStyle = css("--muted"); g.font = "12px system-ui, sans-serif"; g.lineWidth = 1;
+    for (let k = 0; k <= 4; k++) { const v = mx * k / 4;
+      g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + W, Y(v)); g.stroke(); g.fillText(v.toFixed(1), 6, Y(v) + 4);
+      g.beginPath(); g.moveTo(X(v), T); g.lineTo(X(v), T + H); g.stroke(); g.fillText(v.toFixed(1), X(v) - 8, T + H + 18); }
+    g.fillStyle = css("--soft");
+    g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(X(mx), Y(mx)); g.lineTo(X(0), Y(mx)); g.closePath(); g.fill();
+    g.fillStyle = css("--muted");
+    for (const c of cloud) { g.globalAlpha = .35; g.fillRect(X(c.FQ) - 1.2, Y(c.FP) - 1.2, 2.4, 2.4); }
+    g.globalAlpha = 1;
+    g.strokeStyle = css("--orange"); g.lineWidth = 2; g.setLineDash([7, 5]);
+    g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(X(mx), Y(mx)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = css("--orange"); g.fillText("F_P = F_Q  (Lean bound)", X(mx * .56) + 8, Y(mx * .52));
+    g.fillStyle = css("--ink2"); g.fillText("forbidden", X(mx * .06), Y(mx * .92));
+    g.fillStyle = css("--blue"); g.beginPath(); g.arc(X(st.FQ), Y(st.FP), 7, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = css("--panel"); g.lineWidth = 2; g.stroke();
+    g.fillStyle = css("--muted"); g.fillText("F_Q = 4 Var T", L + W - 90, T + H + 30);
+  }
+  function update() {
+    const st = analyse(...state);
+    drawVec(st); drawPlot(st);
+    $("rq").textContent = st.FQ.toFixed(4); $("rp").textContent = st.FP.toFixed(4);
+    const e = st.FQ > 0 ? st.FP / st.FQ : 0;
+    $("re").textContent = e.toFixed(4); $("bar").style.width = (100 * e) + "%";
+    $("ra").textContent = (st.ang * 180 / Math.PI).toFixed(2) + "°";
+    $("vd").textContent = d;
+    $("vphi").textContent = Math.abs(phi - Math.PI / 2) < 0.003 ? "π/2" : phi.toFixed(3);
+  }
+  $("d").addEventListener("input", (e) => { d = +e.target.value; state = phased(d, phi); makeCloud(); update(); });
+  $("phi").addEventListener("input", (e) => { phi = +e.target.value; state = phased(d, phi); update(); });
+  $("star").addEventListener("click", () => { phi = Math.PI / 2; $("phi").value = phi; state = phased(d, phi); update(); });
+  $("rand").addEventListener("click", () => { state = randomState(d); update(); $("vphi").textContent = "random"; });
+  $("theme").addEventListener("click", () => {
+    const r = document.documentElement, dk = matchMedia("(prefers-color-scheme: dark)").matches;
+    r.dataset.theme = (r.dataset.theme || (dk ? "dark" : "light")) === "dark" ? "light" : "dark"; update();
+  });
+  window.addEventListener("resize", update);
+  state = phased(d, phi); makeCloud(); update();
+})();
+</script>
+</body>
+</html>
