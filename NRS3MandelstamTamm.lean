@@ -1,0 +1,3 @@
+module
+
+public import NRS3MandelstamTamm.MandelstamTamm1945
