@@ -48,8 +48,7 @@ Every file: no `sorry`, lines of at most 100 characters, English headers.
 - [NRS³ · Cramér–Rao](https://github.com/naype888-cloud/nrs3-cramer-rao)
 - **[NRS³ · Mandelstam–Tamm](https://github.com/naype888-cloud/nrs3-mandelstam-tamm)** (this one)
 - [NRS³ · Penrose](https://github.com/naype888-cloud/nrs3-penrose)
-- [NRS³ · Dirac](https://github.com/naype888-cloud/nrs3-dirac)
-- [NRS³ · Pauli](https://github.com/naype888-cloud/nrs3-pauli)
+- [NRS³ · Pauli–Dirac](https://github.com/naype888-cloud/nrs3-pauli-dirac)
 - [NRS³ · Poincaré](https://github.com/naype888-cloud/nrs3-poincare)
 
 ## License
