@@ -1,4 +1,4 @@
-import NRS3MandelstamTamm
+import NRS3MandelstamTammCramerRao
 
 /-! Only `propext`, `Classical.choice` and `Quot.sound` are expected. -/
 
@@ -7,3 +7,5 @@ import NRS3MandelstamTamm
 #print axioms MandelstamTamm1945.hasDerivAt_evolve
 #print axioms MandelstamTamm1945.cos_le_norm_inner_evolve
 #print axioms MandelstamTamm1945.norm_amplitude_half_eq_cos
+#print axioms CramerRao.robertson
+#print axioms CramerRao.fisher_le_qfi
