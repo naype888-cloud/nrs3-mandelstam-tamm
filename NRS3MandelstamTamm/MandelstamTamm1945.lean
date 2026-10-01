@@ -24,13 +24,14 @@ the survival amplitude is `A(t) = ∑ p_k e^{−i E_k t}` and the energy spread 
 The probability `P = ‖A‖²` obeys `P' ≥ −2 ΔE √(P (1 − P))`, Robertson's inequality for the
 energy and the projector on the initial state written as one weighted Cauchy–Schwarz. Fencing
 `P` from below by `cos² ((ΔE + η)(t + η))` and letting `η → 0⁺` gives the bound. Two equal
-branches attain it (`Penrose1996.twoBranch_orthogonal`), so `π/2` is sharp.
+branches attain it (`norm_amplitude_half_eq_cos`), so `π/2` is sharp.
 
 ## Main results
 
 - `MandelstamTamm1945.neg_le_inner_deriv` : `⟪A, A'⟫ ≥ −ΔE ‖A‖ √(1 − ‖A‖²)`.
 - `MandelstamTamm1945.cos_le_norm_amplitude` : `cos (ΔE t) ≤ ‖A(t)‖` for `0 ≤ ΔE t ≤ π/2`.
 - `MandelstamTamm1945.orthogonality_time` : `A(t) = 0` with `t ≥ 0` forces `π/2 ≤ ΔE t`.
+- `MandelstamTamm1945.norm_amplitude_half_eq_cos` : two equal branches attain it; `π/2` is sharp.
 - `MandelstamTamm1945.hasDerivAt_evolve`, `inner_evolve` : on `H_d = ℂ^d`, the Schrödinger
   evolution of a self-adjoint `H` has exactly this amplitude, `p_k = ‖⟨v_k, ψ⟩‖²`.
 - `MandelstamTamm1945.cos_le_norm_inner_evolve` : the bound on `ℂ^d`.
@@ -189,6 +190,38 @@ theorem orthogonality_time (hp : ∀ k, 0 ≤ p k) (h1 : ∑ k, p k = 1) {t : �
   have hnn : 0 ≤ spread p E * t := mul_nonneg (Real.sqrt_nonneg _) ht0
   have : 0 < cos (spread p E * t) := cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], h⟩
   linarith
+
+/-! ## Two equal branches attain the bound -/
+
+/-- The weights of two equal branches. -/
+def half : Fin 2 → ℝ := ![1 / 2, 1 / 2]
+
+theorem spread_half (E₀ E₁ : ℝ) : spread half ![E₀, E₁] = |(E₁ - E₀) / 2| := by
+  rw [spread, ← Real.sqrt_sq_eq_abs]
+  congr 1
+  simp [mean, half, Fin.sum_univ_two]
+  ring
+
+theorem norm_amplitude_half (E₀ E₁ t : ℝ) :
+    ‖amplitude half ![E₀, E₁] t‖ = |cos (spread half ![E₀, E₁] * t)| := by
+  have h : amplitude half ![E₀, E₁] t = Complex.exp (↑(-((E₀ + E₁) / 2 * t)) * Complex.I)
+      * Complex.cos ↑((E₁ - E₀) / 2 * t) := by
+    simp only [amplitude, phase, half, Fin.sum_univ_two, Matrix.cons_val_zero,
+      Matrix.cons_val_one, Matrix.cons_val_fin_one, Complex.real_smul, Complex.cos, mul_add,
+      ← Complex.exp_add, mul_div_assoc']
+    push_cast
+    ring_nf
+  rw [h, norm_mul, Complex.norm_exp_ofReal_mul_I, one_mul, ← Complex.ofReal_cos,
+    Complex.norm_real, Real.norm_eq_abs, spread_half]
+  rcases abs_cases ((E₁ - E₀) / 2) with ⟨ha, -⟩ | ⟨ha, -⟩ <;> rw [ha]
+  rw [neg_mul, cos_neg]
+
+/-- **The constant `π/2` is sharp**: two equal branches meet the bound with equality,
+`‖A(t)‖ = cos (ΔE t)` for `0 ≤ ΔE t ≤ π/2`. -/
+theorem norm_amplitude_half_eq_cos (E₀ E₁ : ℝ) {t : ℝ} (ht0 : 0 ≤ spread half ![E₀, E₁] * t)
+    (ht : spread half ![E₀, E₁] * t ≤ π / 2) :
+    ‖amplitude half ![E₀, E₁] t‖ = cos (spread half ![E₀, E₁] * t) := by
+  rw [norm_amplitude_half, abs_of_nonneg (cos_nonneg_of_mem_Icc ⟨by linarith [pi_pos], ht⟩)]
 
 /-! ## On `H_d = ℂ^d` -/
 
